@@ -12,6 +12,7 @@ import {
 import { User } from './user/entities/user.entity';
 import { Cv } from './cv/entities/cv.entity';
 import { Skill } from './skill/entities/skill.entity';
+import { UserRole } from './user/entities/user.entity';
 
 @Injectable()
 export class SeedService {
@@ -41,6 +42,7 @@ export class SeedService {
         username: randFullName(),
         email: randEmail(),
         password: 'al9ooli_stage',
+        role: UserRole.USER,
       });
 
       // Cvs
