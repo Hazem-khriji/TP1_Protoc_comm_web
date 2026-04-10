@@ -12,6 +12,8 @@ import {
 import { User } from './user/entities/user.entity';
 import { Cv } from './cv/entities/cv.entity';
 import { Skill } from './skill/entities/skill.entity';
+import { UserRole } from './user/entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class SeedService {
@@ -22,6 +24,7 @@ export class SeedService {
   ) {}
 
   async seed() {
+    const saltOrRounds = 10;
     // li sar 9ball nfass5ooh
     await this.cvRepo.manager.query('DELETE FROM `skill_cvs_cv`');
     await this.cvRepo.createQueryBuilder().delete().from(Cv).execute();
@@ -40,7 +43,8 @@ export class SeedService {
       const user = await this.userRepo.save({
         username: randFullName(),
         email: randEmail(),
-        password: 'al9ooli_stage',
+        password: await bcrypt.hash('al9ooli_stage', saltOrRounds),
+        role: UserRole.USER,
       });
 
       // Cvs

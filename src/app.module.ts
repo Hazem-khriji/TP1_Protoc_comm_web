@@ -10,6 +10,7 @@ import { SeedService } from './seeder';
 import { Skill } from './skill/entities/skill.entity';
 import { Cv } from './cv/entities/cv.entity';
 import { User } from './user/entities/user.entity';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { User } from './user/entities/user.entity';
     CvModule,
     UserModule,
     SkillModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],
