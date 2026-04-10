@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
@@ -11,11 +12,18 @@ describe('AuthService', () => {
     create: jest.Mock;
     findOneByEmail: jest.Mock;
   };
+  let jwtService: {
+    sign: jest.Mock;
+  };
 
   beforeEach(async () => {
     userService = {
       create: jest.fn(),
       findOneByEmail: jest.fn(),
+    };
+
+    jwtService = {
+      sign: jest.fn().mockReturnValue('signed-token'),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -24,6 +32,10 @@ describe('AuthService', () => {
         {
           provide: UserService,
           useValue: userService,
+        },
+        {
+          provide: JwtService,
+          useValue: jwtService,
         },
       ],
     }).compile();
@@ -35,7 +47,7 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
-  it('should register a new user and not return password', async () => {
+  it('should register a new user and return user with access token', async () => {
     userService.findOneByEmail.mockRejectedValue(new NotFoundException());
     jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed-password' as never);
     userService.create.mockResolvedValue({
@@ -60,11 +72,19 @@ describe('AuthService', () => {
         password: 'hashed-password',
       }),
     );
-    expect(result).toEqual({
-      id: 1,
-      username: 'ahmed',
+    expect(jwtService.sign).toHaveBeenCalledWith({
+      sub: 1,
       email: 'ahmed@mail.com',
       role: UserRole.USER,
+    });
+    expect(result).toEqual({
+      user: {
+        id: 1,
+        username: 'ahmed',
+        email: 'ahmed@mail.com',
+        role: UserRole.USER,
+      },
+      accessToken: 'signed-token',
     });
   });
 
@@ -83,5 +103,36 @@ describe('AuthService', () => {
         password: 'wrong-password',
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('should return user with access token on valid login', async () => {
+    userService.findOneByEmail.mockResolvedValue({
+      id: 1,
+      username: 'ahmed',
+      email: 'ahmed@mail.com',
+      password: 'hashed-password',
+      role: UserRole.USER,
+    });
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+    const result = await service.login({
+      email: 'ahmed@mail.com',
+      password: 'secret123',
+    });
+
+    expect(jwtService.sign).toHaveBeenCalledWith({
+      sub: 1,
+      email: 'ahmed@mail.com',
+      role: UserRole.USER,
+    });
+    expect(result).toEqual({
+      user: {
+        id: 1,
+        username: 'ahmed',
+        email: 'ahmed@mail.com',
+        role: UserRole.USER,
+      },
+      accessToken: 'signed-token',
+    });
   });
 });

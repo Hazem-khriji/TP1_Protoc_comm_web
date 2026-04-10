@@ -4,6 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service';
 import { UserRole } from '../user/entities/user.entity';
@@ -26,18 +27,31 @@ export interface AuthUserResponse {
   role: UserRole;
 }
 
+export interface AuthResponse {
+  user: AuthUserResponse;
+  accessToken: string;
+}
+
+type JwtPayload = {
+  userId: number;
+  email: string;
+  role: UserRole;
+};
+
 @Injectable()
 export class AuthService {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+  ) {}
 
-  async register(registerDto: RegisterPayload): Promise<AuthUserResponse> {
+  async register(registerDto: RegisterPayload): Promise<AuthResponse> {
     let emailAlreadyExists = false;
 
     try {
       await this.userService.findOneByEmail(registerDto.email);
       emailAlreadyExists = true;
     } catch (error) {
-      // If the user is not found, we can proceed with registration.
       if (!(error instanceof NotFoundException)) {
         throw error;
       }
@@ -55,10 +69,10 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    return this.buildAuthUserResponse(createdUser);
+    return this.buildAuthResponse(createdUser);
   }
 
-  async login(loginDto: LoginPayload): Promise<AuthUserResponse> {
+  async login(loginDto: LoginPayload): Promise<AuthResponse> {
     const user = await this.userService.findOneByEmail(loginDto.email);
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
@@ -69,7 +83,26 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.buildAuthUserResponse(user);
+    return this.buildAuthResponse(user);
+  }
+
+  private buildAuthResponse(user: {
+    id: number;
+    username: string;
+    email: string;
+    role: UserRole;
+  }): AuthResponse {
+    const authUser = this.buildAuthUserResponse(user);
+    const payload: JwtPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    return {
+      user: authUser,
+      accessToken: this.jwtService.sign(payload),
+    };
   }
 
   private buildAuthUserResponse(user: {
