@@ -59,7 +59,7 @@ export class SeedService {
 
         await this.cvRepo.save({
           name: name,
-          firstname: firstName,
+          firstName: firstName,
           age: randNumber({ min: 18, max: 62 }),
           cin: randNumber({ min: 10000000, max: 99999999 }).toString(),
           job: randJobTitle(),
