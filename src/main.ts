@@ -1,20 +1,20 @@
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import 'reflect-metadata';
-import { SeedService } from './seeder';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const seeder = app.get(SeedService);
-  try {
-    console.log('Seeding bdee w ani ltaw ma l9itsh stage...');
-    await seeder.seed();
-    console.log('Seeding kmel w ani ltaw ma l9itsh stage');
-  } catch (error) {
-    console.error('Ani w seeding zooz ma 5dmnesh', error);
-  } finally {
-    await app.close();
-  }
+
+  const config = new DocumentBuilder()
+    .setTitle('TP1 Protoc Comm Web API')
+    .setDescription('API documentation for TP1 Protoc Comm Web')
+    .setVersion('1.0')
+    .build();
+
+  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, documentFactory);
+
+  await app.listen(process.env.PORT ?? 3000);
 }
+
 void bootstrap();
