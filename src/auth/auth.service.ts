@@ -20,6 +20,13 @@ type LoginPayload = {
   password: string;
 };
 
+type ValidatedUser = {
+  id: number;
+  username: string;
+  email: string;
+  role: UserRole;
+};
+
 export interface AuthUserResponse {
   id: number;
   username: string;
@@ -33,7 +40,7 @@ export interface AuthResponse {
 }
 
 type JwtPayload = {
-  userId: number;
+  sub: number;
   email: string;
   role: UserRole;
 };
@@ -72,14 +79,35 @@ export class AuthService {
     return this.buildAuthResponse(createdUser);
   }
 
-  async login(loginDto: LoginPayload): Promise<AuthResponse> {
-    const user = await this.userService.findOneByEmail(loginDto.email);
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<ValidatedUser | null> {
+    try {
+      const user = await this.userService.findOneByEmail(email);
+      const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    if (!isPasswordValid) {
+      if (!isPasswordValid) {
+        return null;
+      }
+
+      return this.buildAuthUserResponse(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  async login(loginInput: LoginPayload | ValidatedUser): Promise<AuthResponse> {
+    const user =
+      'password' in loginInput
+        ? await this.validateUser(loginInput.email, loginInput.password)
+        : loginInput;
+
+    if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -94,7 +122,7 @@ export class AuthService {
   }): AuthResponse {
     const authUser = this.buildAuthUserResponse(user);
     const payload: JwtPayload = {
-      userId: user.id,
+      sub: user.id,
       email: user.email,
       role: user.role,
     };
