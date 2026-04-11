@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CreateCvDto } from './dto/create-cv.dto';
 import { UpdateCvDto } from './dto/update-cv.dto';
 import { Cv } from './entities/cv.entity';
-import { User } from '../user/entities/user.entity';
+import { User, UserRole } from '../user/entities/user.entity';
 import { Skill } from '../skill/entities/skill.entity';
 
 @Injectable()
@@ -18,13 +22,13 @@ export class CvService {
     private readonly skillRepository: Repository<Skill>,
   ) {}
 
-  async create(createCvDto: CreateCvDto): Promise<Cv> {
+  async create(createCvDto: CreateCvDto, userId: number): Promise<Cv> {
     const user = await this.userRepository.findOneBy({
-      id: createCvDto.userId,
+      id: userId,
     });
     if (!user) {
       throw new NotFoundException(
-        `User with id ${createCvDto.userId} not found`,
+        `User with id ${userId} not found`,
       );
     }
 
@@ -51,7 +55,26 @@ export class CvService {
     return this.cvRepository.save(cv);
   }
 
-  findAll(): Promise<Cv[]> {
+  findAll(userRole?: string, userId?: number): Promise<Cv[]> {
+    if (userRole === UserRole.ADMIN) {
+      return this.cvRepository.find({
+        relations: {
+          user: true,
+          skills: true,
+        },
+      });
+    }
+
+    if (userId) {
+      return this.cvRepository.find({
+        where: { user: { id: userId } },
+        relations: {
+          user: true,
+          skills: true,
+        },
+      });
+    }
+
     return this.cvRepository.find({
       relations: {
         user: true,
@@ -76,17 +99,14 @@ export class CvService {
     return cv;
   }
 
-  async update(id: number, updateCvDto: UpdateCvDto): Promise<Cv> {
+  async update(id: number, updateCvDto: UpdateCvDto, userId: number, userRole?: string): Promise<Cv> {
     const cv = await this.findOne(id);
-    const { userId, skillIds, ...cvFields } = updateCvDto;
 
-    if (userId !== undefined) {
-      const user = await this.userRepository.findOneBy({ id: userId });
-      if (!user) {
-        throw new NotFoundException(`User with id ${userId} not found`);
-      }
-      cv.user = user;
+    if (userRole !== UserRole.ADMIN && cv.user.id !== userId) {
+      throw new ForbiddenException('You can only update your own CVs');
     }
+
+    const { skillIds, ...cvFields } = updateCvDto;
 
     if (skillIds !== undefined) {
       const requestedIds = [...new Set(skillIds)];
@@ -105,8 +125,13 @@ export class CvService {
     return this.cvRepository.save(cv);
   }
 
-  async remove(id: number): Promise<Cv> {
+  async remove(id: number, userId: number, userRole?: string): Promise<Cv> {
     const cv = await this.findOne(id);
+
+    if (userRole !== UserRole.ADMIN && cv.user.id !== userId) {
+      throw new ForbiddenException('You can only delete your own CVs');
+    }
+
     await this.cvRepository.remove(cv);
     return cv;
   }
