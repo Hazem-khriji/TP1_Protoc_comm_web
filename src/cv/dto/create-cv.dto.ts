@@ -29,6 +29,10 @@ export class CreateCvDto {
   @IsNotEmpty()
   job: string;
 
+  @IsString()
+  @IsNotEmpty()
+  path: string;
+
   @IsArray()
   @IsOptional()
   skillIds?: number[];

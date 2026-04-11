@@ -4,8 +4,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { verify } from 'jsonwebtoken';
+
+type AuthTokenPayload = {
+  userId?: number;
+  sub?: number;
+  role?: string;
+};
 
 export interface AuthenticatedRequest extends Request {
   userId?: number;
@@ -14,16 +20,16 @@ export interface AuthenticatedRequest extends Request {
 
 @Injectable()
 export class AuthMiddleware implements NestMiddleware {
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly configService: ConfigService) {}
 
   use(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-    const authHeader = req.headers['authorization'];
+    const authHeaderRaw = req.headers['auth-user'];
+    const authHeader = Array.isArray(authHeaderRaw)
+      ? authHeaderRaw[0]
+      : authHeaderRaw;
 
     if (!authHeader) {
-      throw new UnauthorizedException('Missing authorization header');
+      throw new UnauthorizedException('Missing auth-user header');
     }
 
     const token = authHeader.startsWith('Bearer ')
@@ -31,14 +37,16 @@ export class AuthMiddleware implements NestMiddleware {
       : authHeader;
 
     try {
-      const secret = this.configService.get<string>('JWT_SECRET') ?? 'dev-secret';
-      const payload = this.jwtService.verify(token, { secret });
+      const secret =
+        this.configService.get<string>('JWT_SECRET') ?? 'dev-secret';
+      const payload = verify(token, secret) as AuthTokenPayload;
+      const userId = payload.userId ?? payload.sub;
 
-      if (!payload.userId) {
+      if (!userId) {
         throw new UnauthorizedException('Invalid token: missing userId');
       }
 
-      req.userId = payload.userId;
+      req.userId = userId;
       req.userRole = payload.role;
       next();
     } catch (error) {

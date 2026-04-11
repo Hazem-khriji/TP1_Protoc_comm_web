@@ -48,6 +48,7 @@ export class CvService {
       age: createCvDto.age,
       cin: createCvDto.cin,
       job: createCvDto.job,
+      path: createCvDto.path,
       user,
       skills,
     });
@@ -65,17 +66,12 @@ export class CvService {
       });
     }
 
-    if (userId) {
-      return this.cvRepository.find({
-        where: { user: { id: userId } },
-        relations: {
-          user: true,
-          skills: true,
-        },
-      });
+    if (!userId) {
+      throw new ForbiddenException('Authentication required');
     }
 
     return this.cvRepository.find({
+      where: { user: { id: userId } },
       relations: {
         user: true,
         skills: true,
@@ -83,7 +79,7 @@ export class CvService {
     });
   }
 
-  async findOne(id: number): Promise<Cv> {
+  async findOne(id: number, userId: number, userRole?: string): Promise<Cv> {
     const cv = await this.cvRepository.findOne({
       where: { id },
       relations: {
@@ -96,15 +92,15 @@ export class CvService {
       throw new NotFoundException(`Cv with id ${id} not found`);
     }
 
+    if (userRole !== UserRole.ADMIN && cv.user.id !== userId) {
+      throw new ForbiddenException('You can only access your own CVs');
+    }
+
     return cv;
   }
 
   async update(id: number, updateCvDto: UpdateCvDto, userId: number, userRole?: string): Promise<Cv> {
-    const cv = await this.findOne(id);
-
-    if (userRole !== UserRole.ADMIN && cv.user.id !== userId) {
-      throw new ForbiddenException('You can only update your own CVs');
-    }
+    const cv = await this.findOne(id, userId, userRole);
 
     const { skillIds, ...cvFields } = updateCvDto;
 
@@ -126,11 +122,7 @@ export class CvService {
   }
 
   async remove(id: number, userId: number, userRole?: string): Promise<Cv> {
-    const cv = await this.findOne(id);
-
-    if (userRole !== UserRole.ADMIN && cv.user.id !== userId) {
-      throw new ForbiddenException('You can only delete your own CVs');
-    }
+    const cv = await this.findOne(id, userId, userRole);
 
     await this.cvRepository.remove(cv);
     return cv;

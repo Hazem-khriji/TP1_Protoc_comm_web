@@ -28,6 +28,9 @@ export class Cv {
   @Column()
   job: string;
 
+  @Column()
+  path: string;
+
   @ManyToOne(() => User, (user) => user.cvs)
   user: User;
 

@@ -6,13 +6,11 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
 } from '@nestjs/common';
 import { CvService } from './cv.service';
 import { CreateCvDto } from './dto/create-cv.dto';
 import { UpdateCvDto } from './dto/update-cv.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { AdminGuard } from '../common/guards/admin.guard';
 
 @Controller('cv')
 export class CvController {
@@ -32,8 +30,11 @@ export class CvController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.cvService.findOne(+id);
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: { userId: number; role: string },
+  ) {
+    return this.cvService.findOne(+id, currentUser.userId, currentUser.role);
   }
 
   @Patch(':id')

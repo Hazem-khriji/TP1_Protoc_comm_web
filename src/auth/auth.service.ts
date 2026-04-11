@@ -40,6 +40,7 @@ export interface AuthResponse {
 }
 
 type JwtPayload = {
+  userId: number;
   sub: number;
   email: string;
   role: UserRole;
@@ -122,6 +123,7 @@ export class AuthService {
   }): AuthResponse {
     const authUser = this.buildAuthUserResponse(user);
     const payload: JwtPayload = {
+      userId: user.id,
       sub: user.id,
       email: user.email,
       role: user.role,

@@ -3,15 +3,15 @@ import { AppModule } from './app.module';
 import { SeedService } from './seeder';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.createApplicationContext(AppModule);
   const seeder = app.get(SeedService);
 
   try {
-    console.log('Seeding bdee w ani ltaw ma l9itsh stage...');
+    console.log('Seeding started...');
     await seeder.seed();
-    console.log('Seeding kmel w ani ltaw ma l9itsh stage');
+    console.log('Seeding completed successfully.');
   } catch (error) {
-    console.error('Ani w seeding zooz ma 5dmnesh', error);
+    console.error('Seeding failed', error);
   } finally {
     await app.close();
   }
