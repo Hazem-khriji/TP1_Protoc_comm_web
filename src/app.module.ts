@@ -11,14 +11,16 @@ import { Skill } from './skill/entities/skill.entity';
 import { Cv } from './cv/entities/cv.entity';
 import { User } from './user/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { CvEventModule } from './cv-event/cv-event.module';
 
 @Module({
   imports: [
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['src/.env', '.env'],
     }),
+    EventEmitterModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST!,
@@ -35,6 +37,7 @@ import { AuthModule } from './auth/auth.module';
     UserModule,
     SkillModule,
     AuthModule,
+    CvEventModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],
