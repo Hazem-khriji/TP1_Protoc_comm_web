@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CreateCvDto } from './dto/create-cv.dto';
@@ -10,10 +11,12 @@ import { UpdateCvDto } from './dto/update-cv.dto';
 import { Cv } from './entities/cv.entity';
 import { User, UserRole } from '../user/entities/user.entity';
 import { Skill } from '../skill/entities/skill.entity';
+import { CvEventType } from '../cv-event/entities/cv-event.entity';
 
 @Injectable()
 export class CvService {
   constructor(
+    private readonly eventEmitter: EventEmitter2,
     @InjectRepository(Cv)
     private readonly cvRepository: Repository<Cv>,
     @InjectRepository(User)
@@ -27,9 +30,7 @@ export class CvService {
       id: userId,
     });
     if (!user) {
-      throw new NotFoundException(
-        `User with id ${userId} not found`,
-      );
+      throw new NotFoundException(`User with id ${userId} not found`);
     }
 
     let skills: Skill[] = [];
@@ -53,7 +54,11 @@ export class CvService {
       skills,
     });
 
-    return this.cvRepository.save(cv);
+    const savedCv = await this.cvRepository.save(cv);
+
+    this.emitCvEvent(CvEventType.CREATE, savedCv, userId);
+
+    return savedCv;
   }
 
   findAll(userRole?: string, userId?: number): Promise<Cv[]> {
@@ -99,7 +104,12 @@ export class CvService {
     return cv;
   }
 
-  async update(id: number, updateCvDto: UpdateCvDto, userId: number, userRole?: string): Promise<Cv> {
+  async update(
+    id: number,
+    updateCvDto: UpdateCvDto,
+    userId: number,
+    userRole?: string,
+  ): Promise<Cv> {
     const cv = await this.findOne(id, userId, userRole);
 
     const { skillIds, ...cvFields } = updateCvDto;
@@ -118,13 +128,44 @@ export class CvService {
     }
 
     Object.assign(cv, cvFields);
-    return this.cvRepository.save(cv);
+    const savedCv = await this.cvRepository.save(cv);
+
+    this.emitCvEvent(CvEventType.UPDATE, savedCv, userId);
+
+    return savedCv;
   }
 
   async remove(id: number, userId: number, userRole?: string): Promise<Cv> {
     const cv = await this.findOne(id, userId, userRole);
 
     await this.cvRepository.remove(cv);
+
+    this.emitCvEvent(CvEventType.DELETE, cv, userId);
+
     return cv;
+  }
+
+  private emitCvEvent(type: CvEventType, cv: Cv, performedById: number) {
+    this.eventEmitter.emit('cv.persisted', {
+      type,
+      cvId: cv.id,
+      cvOwnerId: cv.user?.id ?? performedById,
+      performedById,
+      cvSnapshot: this.buildCvSnapshot(cv),
+    });
+  }
+
+  private buildCvSnapshot(cv: Cv): Record<string, unknown> {
+    return {
+      id: cv.id,
+      name: cv.name,
+      firstName: cv.firstName,
+      age: cv.age,
+      cin: cv.cin,
+      job: cv.job,
+      path: cv.path,
+      userId: cv.user?.id,
+      skillIds: cv.skills?.map((skill) => skill.id) ?? [],
+    };
   }
 }

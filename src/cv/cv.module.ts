@@ -1,4 +1,9 @@
-import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { CvService } from './cv.service';
@@ -9,10 +14,7 @@ import { Skill } from '../skill/entities/skill.entity';
 import { AuthMiddleware } from '../common/middleware/auth.middleware';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Cv, User, Skill]),
-    ConfigModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Cv, User, Skill]), ConfigModule],
   controllers: [CvController],
   providers: [CvService],
 })
