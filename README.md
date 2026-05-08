@@ -26,13 +26,13 @@
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
 ```bash
-curl -N -H "auth-user: Bearer <JWT>" http://localhost:3000/cv-events/stream
+curl -N -H "Authorization: Bearer <JWT>" http://localhost:3000/cv-events/stream
 ```
 
 ### History usage
 
 ```bash
-curl -H "auth-user: Bearer <JWT>" http://localhost:3000/cv-events
+curl -H "Authorization: Bearer <JWT>" http://localhost:3000/cv-events
 ```
 
 ## Project setup

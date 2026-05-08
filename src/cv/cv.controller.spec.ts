@@ -4,11 +4,18 @@ import { CvService } from './cv.service';
 
 describe('CvController', () => {
   let controller: CvController;
+  const cvServiceMock = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CvController],
-      providers: [CvService],
+      providers: [{ provide: CvService, useValue: cvServiceMock }],
     }).compile();
 
     controller = module.get<CvController>(CvController);

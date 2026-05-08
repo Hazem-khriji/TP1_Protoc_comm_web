@@ -1,4 +1,9 @@
-import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { SkillService } from './skill.service';
@@ -7,10 +12,7 @@ import { Skill } from './entities/skill.entity';
 import { AuthMiddleware } from '../common/middleware/auth.middleware';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Skill]),
-    ConfigModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Skill]), ConfigModule],
   controllers: [SkillController],
   providers: [SkillService],
 })

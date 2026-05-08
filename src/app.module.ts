@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { HttpModule } from '@nestjs/axios';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CvModule } from './cv/cv.module';
@@ -13,6 +14,7 @@ import { User } from './user/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CvEventModule } from './cv-event/cv-event.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { CvEventModule } from './cv-event/cv-event.module';
       envFilePath: ['src/.env', '.env'],
     }),
     EventEmitterModule.forRoot(),
+    HttpModule,
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST!,
@@ -38,6 +41,7 @@ import { CvEventModule } from './cv-event/cv-event.module';
     SkillModule,
     AuthModule,
     CvEventModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],

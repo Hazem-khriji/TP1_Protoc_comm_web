@@ -38,6 +38,6 @@ export class CvEventService {
   }
 
   private isAdmin(role: string | undefined): boolean {
-    return String(role ?? '').toUpperCase() === UserRole.ADMIN;
+    return String(role ?? '').toUpperCase() === String(UserRole.ADMIN);
   }
 }
