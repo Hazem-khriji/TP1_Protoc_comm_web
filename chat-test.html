@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebSocket Chat Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 20px; }
+    #auth { margin-bottom: 20px; }
+    #auth input { width: 500px; padding: 6px; }
+    #auth button { padding: 6px 14px; }
+    #status { margin: 8px 0; font-weight: bold; }
+    #messages { border: 1px solid #ccc; height: 350px; overflow-y: auto; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+    .msg { margin-bottom: 10px; }
+    .msg .author { font-weight: bold; color: #333; }
+    .msg .time { font-size: 11px; color: #999; margin-left: 6px; }
+    .msg .content { margin: 2px 0 4px 0; }
+    .msg .reactions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .reaction-btn { background: #eee; border: 1px solid #ccc; border-radius: 12px; padding: 2px 8px; cursor: pointer; font-size: 13px; }
+    .reaction-btn:hover { background: #ddd; }
+    #input-row { display: flex; gap: 8px; }
+    #msgInput { flex: 1; padding: 8px; font-size: 14px; }
+    #sendBtn { padding: 8px 16px; }
+    #log { margin-top: 16px; font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <h2>Chat WebSocket Tester</h2>
+
+  <div id="auth">
+    <p>Paste your JWT token then click Connect:</p>
+    <input id="tokenInput" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+    <button onclick="connect()">Connect</button>
+  </div>
+
+  <div id="status">Status: <span id="statusText" style="color:red">Disconnected</span></div>
+
+  <div id="messages"></div>
+
+  <div id="input-row">
+    <input id="msgInput" type="text" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()" />
+    <button id="sendBtn" onclick="sendMessage()">Send</button>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    let socket = null;
+    const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
+    let messagesMap = {};
+
+    function connect() {
+      const token = document.getElementById('tokenInput').value.trim();
+      if (!token) return alert('Paste a JWT token first!');
+
+      if (socket) socket.disconnect();
+
+      socket = io('http://localhost:3000', { auth: { token } });
+
+      socket.on('connect', () => {
+        document.getElementById('statusText').textContent = 'Connected ✓';
+        document.getElementById('statusText').style.color = 'green';
+        log('Connected with socket id: ' + socket.id);
+      });
+
+      socket.on('connect_error', (err) => {
+        document.getElementById('statusText').textContent = 'Error: ' + err.message;
+        document.getElementById('statusText').style.color = 'red';
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('statusText').textContent = 'Disconnected';
+        document.getElementById('statusText').style.color = 'red';
+      });
+
+      socket.on('error', (msg) => log('Server error: ' + msg));
+
+      socket.on('history', (messages) => {
+        document.getElementById('messages').innerHTML = '';
+        messagesMap = {};
+        messages.forEach(renderMessage);
+        log('Received ' + messages.length + ' message(s) from history');
+      });
+
+      socket.on('newMessage', (message) => {
+        renderMessage(message);
+        log('New message from ' + message.authorEmail);
+      });
+
+      socket.on('messageReaction', (message) => {
+        updateReactions(message);
+        log('Reaction updated on message ' + message.id.slice(0, 8) + '...');
+      });
+
+      socket.on('userJoined', (data) => log('→ ' + data.email + ' joined. Online: ' + data.onlineCount));
+      socket.on('userLeft',   (data) => log('← ' + data.email + ' left. Online: '   + data.onlineCount));
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('msgInput');
+      const content = input.value.trim();
+      if (!socket || !content) return;
+      socket.emit('sendMessage', { content });
+      input.value = '';
+    }
+
+    function react(messageId, emoji) {
+      if (!socket) return;
+      socket.emit('reactToMessage', { messageId, emoji });
+    }
+
+    function renderMessage(msg) {
+      messagesMap[msg.id] = msg;
+      const container = document.getElementById('messages');
+
+      let el = document.getElementById('msg-' + msg.id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'msg';
+        el.id = 'msg-' + msg.id;
+        container.appendChild(el);
+        container.scrollTop = container.scrollHeight;
+      }
+
+      const time = new Date(msg.timestamp).toLocaleTimeString();
+      const reactionsHtml = EMOJIS.map(e => {
+        const count = (msg.reactions[e] || []).length;
+        return `<button class="reaction-btn" onclick="react('${msg.id}','${e}')">${e}${count > 0 ? ' ' + count : ''}</button>`;
+      }).join('');
+
+      el.innerHTML = `
+        <span class="author">${msg.authorEmail}</span><span class="time">${time}</span>
+        <div class="content">${escapeHtml(msg.content)}</div>
+        <div class="reactions">${reactionsHtml}</div>
+      `;
+    }
+
+    function updateReactions(msg) {
+      messagesMap[msg.id] = msg;
+      renderMessage(msg);
+    }
+
+    function log(text) {
+      const el = document.getElementById('log');
+      el.innerHTML = '[' + new Date().toLocaleTimeString() + '] ' + text + '<br>' + el.innerHTML;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  </script>
+</body>
+</html>

@@ -15,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CvEventModule } from './cv-event/cv-event.module';
 import { WebhookModule } from './webhook/webhook.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { WebhookModule } from './webhook/webhook.module';
     AuthModule,
     CvEventModule,
     WebhookModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedService],
