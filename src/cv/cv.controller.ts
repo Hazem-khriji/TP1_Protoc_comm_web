@@ -43,7 +43,12 @@ export class CvController {
     @Body() updateCvDto: UpdateCvDto,
     @CurrentUser() currentUser: { userId: number; role: string },
   ) {
-    return this.cvService.update(+id, updateCvDto, currentUser.userId, currentUser.role);
+    return this.cvService.update(
+      +id,
+      updateCvDto,
+      currentUser.userId,
+      currentUser.role,
+    );
   }
 
   @Delete(':id')

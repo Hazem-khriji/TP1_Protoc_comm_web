@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { CvEventService, CvEventPayload } from './cv-event.service';
+import type { CvEventPayload } from './cv-event.service';
+import { CvEventService } from './cv-event.service';
 import { CvEventStreamService } from './cv-event.stream.service';
 
 @Injectable()

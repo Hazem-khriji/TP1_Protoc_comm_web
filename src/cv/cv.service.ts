@@ -49,7 +49,7 @@ export class CvService {
       age: createCvDto.age,
       cin: createCvDto.cin,
       job: createCvDto.job,
-      path: createCvDto.path,
+      path: createCvDto.path ?? null,
       user,
       skills,
     });

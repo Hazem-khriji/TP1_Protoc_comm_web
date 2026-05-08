@@ -23,13 +23,16 @@ export class AuthMiddleware implements NestMiddleware {
   constructor(private readonly configService: ConfigService) {}
 
   use(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-    const authHeaderRaw = req.headers['auth-user'];
-    const authHeader = Array.isArray(authHeaderRaw)
-      ? authHeaderRaw[0]
-      : authHeaderRaw;
+    const authorizationHeaderRaw: string | string[] | undefined =
+      req.headers.authorization;
+    const legacyHeaderRaw: string | string[] | undefined =
+      req.headers['auth-user'];
+    const authHeader =
+      this.extractHeaderValue(authorizationHeaderRaw) ??
+      this.extractHeaderValue(legacyHeaderRaw);
 
     if (!authHeader) {
-      throw new UnauthorizedException('Missing auth-user header');
+      throw new UnauthorizedException('Missing authorization header');
     }
 
     const token = authHeader.startsWith('Bearer ')
@@ -49,11 +52,21 @@ export class AuthMiddleware implements NestMiddleware {
       req.userId = userId;
       req.userRole = payload.role;
       next();
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
       throw new UnauthorizedException('Invalid or expired token');
     }
+  }
+
+  private extractHeaderValue(
+    header: string | string[] | undefined,
+  ): string | undefined {
+    if (Array.isArray(header)) {
+      return header[0];
+    }
+
+    return header;
   }
 }

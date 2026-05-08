@@ -6,6 +6,11 @@ import { AuthService } from './auth.service';
 import { UserService } from '../user/user.service';
 import { UserRole } from '../user/entities/user.entity';
 
+jest.mock('bcrypt', () => ({
+  hash: jest.fn(),
+  compare: jest.fn(),
+}));
+
 describe('AuthService', () => {
   let service: AuthService;
   let userService: {
@@ -15,8 +20,12 @@ describe('AuthService', () => {
   let jwtService: {
     sign: jest.Mock;
   };
+  const mockedBcrypt = bcrypt as jest.Mocked<typeof bcrypt>;
 
   beforeEach(async () => {
+    mockedBcrypt.hash.mockReset();
+    mockedBcrypt.compare.mockReset();
+
     userService = {
       create: jest.fn(),
       findOneByEmail: jest.fn(),
@@ -49,7 +58,7 @@ describe('AuthService', () => {
 
   it('should register a new user and return user with access token', async () => {
     userService.findOneByEmail.mockRejectedValue(new NotFoundException());
-    jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed-password' as never);
+    mockedBcrypt.hash.mockResolvedValue('hashed-password' as never);
     userService.create.mockResolvedValue({
       id: 1,
       username: 'ahmed',
@@ -64,7 +73,7 @@ describe('AuthService', () => {
       password: 'secret123',
     });
 
-    expect(bcrypt.hash).toHaveBeenCalledWith('secret123', 10);
+    expect(mockedBcrypt.hash).toHaveBeenCalledWith('secret123', 10);
     expect(userService.create).toHaveBeenCalledWith(
       expect.objectContaining({
         username: 'ahmed',
@@ -73,6 +82,7 @@ describe('AuthService', () => {
       }),
     );
     expect(jwtService.sign).toHaveBeenCalledWith({
+      userId: 1,
       sub: 1,
       email: 'ahmed@mail.com',
       role: UserRole.USER,
@@ -96,6 +106,7 @@ describe('AuthService', () => {
       password: 'hashed-password',
       role: UserRole.USER,
     });
+    mockedBcrypt.compare.mockResolvedValue(false as never);
 
     await expect(
       service.login({
@@ -113,7 +124,7 @@ describe('AuthService', () => {
       password: 'hashed-password',
       role: UserRole.USER,
     });
-    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+    mockedBcrypt.compare.mockResolvedValue(true as never);
 
     const result = await service.login({
       email: 'ahmed@mail.com',
@@ -121,6 +132,7 @@ describe('AuthService', () => {
     });
 
     expect(jwtService.sign).toHaveBeenCalledWith({
+      userId: 1,
       sub: 1,
       email: 'ahmed@mail.com',
       role: UserRole.USER,

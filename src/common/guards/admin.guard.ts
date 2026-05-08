@@ -6,13 +6,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from '../../user/entities/user.entity';
+import type { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
   constructor(private readonly configService: ConfigService) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const userRole = String(request.userRole ?? '').toUpperCase();
     const configuredRoles = this.configService
       .get<string>('ADMIN_ROLES')

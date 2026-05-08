@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CvService } from './cv.service';
 import { Cv } from './entities/cv.entity';
@@ -21,6 +22,7 @@ describe('CvService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CvService,
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         { provide: getRepositoryToken(Cv), useValue: repoMock },
         { provide: getRepositoryToken(User), useValue: repoMock },
         { provide: getRepositoryToken(Skill), useValue: repoMock },
